@@ -2,7 +2,7 @@
 
 > 本文件供外部 reviewer 審查我們的 AI agent 架構設計。
 > 涵蓋：Agent 分工、LLM 算力池、記憶系統、知識圖譜（Obsidian）、自動化 pipeline、跨 agent 通訊。
-> 最後更新：2026-04-07 10:00 GMT+8
+> 最後更新：2026-04-07 12:00 GMT+8（含 Vault 大整理結果）
 
 ---
 
@@ -244,20 +244,22 @@ Obsidian Vault        → 長期知識本體（永久，可搜尋，有結構）
 
 Obsidian 不只是筆記工具，它是 agent 的**第二大腦**。所有經過品質閘門的知識最終都 graduate 到 Vault。
 
-### Vault 結構（21 個資料夾，~450+ 檔案）
+### Vault 結構（20 個資料夾，580+ 檔案）
 
-| 資料夾 | 檔案數 | 用途 |
-|--------|--------|------|
-| `Lessons/` | 116 | 按領域分類的經驗教訓（知識圖譜核心） |
-| `Skills/` | 60 | 每個 Skill 的文件（scope、trigger、verification） |
-| `Decisions/` | 58 | ADR（Architecture Decision Record） |
-| `Services/` | 56 | 每個服務的文件（config、health、dependency） |
-| `Changelog/` | 38 | 系統變更紀錄 |
-| `Memory/` | 35 | 記憶系統相關文件 |
-| `Learnings/` | 30 | 每日學習摘要（daily digest） |
-| `Reports/` | 27 | 自動生成的報告 |
-| `Architecture/` | 27 | 系統設計文件 |
-| `Templates/` | 11 | 標準化模板（筆記、決策、服務） |
+| 資料夾 | 檔案數 | 用途 | 備註 |
+|--------|--------|------|------|
+| `Lessons/` | 116 | 經驗教訓（知識圖譜核心） | 110 active + 6 archived |
+| `Knowledge/` | 68 | 領域知識庫 | |
+| `Skills/` | 60 | Skill 文件 | 3 orphan archived |
+| `Decisions/` | 59 | ADR（架構決策紀錄） | 7 archived, 1 moved in |
+| `Services/` | 55 | 服務文件 | 2 archived, 1 stub deleted |
+| `Changelog/` | 37 | 系統變更紀錄 | 1 moved out to Decisions |
+| `Memory/` | 35 | 記憶系統文件（歷史快照） | 全部 deprecated |
+| `Learnings/` | 30 | 每日/週學習摘要 | |
+| `Architecture/` | 27 | 系統設計文件 | 3 archived |
+| `Reports/` | 26 | 自動生成報告 | 1 HTML artifact deleted |
+| `Templates/` | 11 | 標準化模板 | |
+| 其他 | ~55 | Agents, Bots, Config, Directives 等 | |
 
 ### 知識流入 Obsidian 的三條路
 
@@ -287,25 +289,39 @@ QMD Router
 - Embedding model: `qwen3-embedding:0.6b`（常駐記憶體，keep_alive=-1）
 - 索引更新: `qmd collection add <path> --update && qmd embed`
 
-### 知識圖譜的「成長」問題
+### 知識圖譜的「成長」機制
 
-**現狀**：Vault 有 450+ 檔案，但「自我成長」機制存在瓶頸：
+**現狀**：Vault 有 580+ 檔案，2026-04-07 完成首次大整理。
 
 | 階段 | 機制 | 狀態 |
 |------|------|------|
 | 知識寫入 | graduate pipeline | ✅ 運作中，每日 ~3-5 條 |
 | 知識連結 | A-MEM graph linking | ✅ Jaccard ≥ 0.45 自動連結 |
 | 知識搜尋 | QMD hybrid search | ✅ BM25 + Vector |
-| 知識清理 | vault-lint.sh (03:15) | ⚠️ 首次發現 42 頁漂移 |
+| 知識清理 | vault-lint.sh (03:15) | ✅ 首輪 42 頁漂移已修正 |
 | 知識合成 | weekly-trend L2 | ✅ 每週 Opus 聚合 |
-| 知識淘汰 | decay pipeline | ⚠️ 只作用於 learning-log，未觸及 Vault 過時筆記 |
+| 知識淘汰 | decay + manual archive | ✅ learning-log 自動 decay + Vault 手動 archive |
+| 知識去重 | consolidation sweep | ✅ 2026-04-07 首次執行，合併 4 組重複 |
 | 主動知識缺口偵測 | curiosity-loop (04:30) | ✅ 追蹤 interest-queue → 自動研究 |
 
-**待改善**：
-1. Vault 內過時筆記無自動淘汰/標記機制（只有 learning-log 有 decay）
-2. Vault 筆記之間的 wiki-link 大多靠人工或 graduate 時產生，缺少批次回補
-3. `Lessons/` 116 個檔案部分重複，需要 consolidation 機制
-4. `Architecture/System Overview.md` 仍描述雙 agent 時代，過時
+### 2026-04-07 Vault 大整理
+
+首次系統性清理，處理 ~50 個檔案：
+
+| 操作 | 數量 | 說明 |
+|------|------|------|
+| Archived（標記過時） | 22 檔 | 蝦蝦退休後過時、被新版取代的文件 |
+| Merged（合併重複） | 4 組 | LLM×3→1, LP×2→1, Token×2→1, Cron→Automation |
+| Split（拆分混雜） | 1 檔 | general.md → climblab + meta-ads + automation |
+| Moved（歸位） | 1 檔 | Decision 誤放 Changelog → 搬回 Decisions |
+| Deleted（空/冗餘） | 3 檔 | 空 stub、HTML export artifact |
+| Frontmatter 修正 | 8 檔 | 移除蝦蝦引用、更新 status、修正指令 |
+
+**原則**：不刪除有內容的檔案，只標記 `status: archived` + 說明被什麼取代。
+
+**待持續改善**：
+1. Vault 筆記之間的 wiki-link 仍需批次回補（目前靠 graduate 時產生）
+2. 需要定期 consolidation 排程（目前為手動）
 
 ---
 
@@ -555,18 +571,21 @@ qg = quality_gate(output="...", task="...")
 
 | 問題 | 影響 | 優先級 |
 |------|------|--------|
-| Obsidian Vault 筆記無自動淘汰 | 過時筆記累積，搜尋結果品質下降 | 🟡 中 |
-| `Architecture/System Overview.md` 過時 | 仍描述雙 agent 架構 | 🟡 中 |
-| `Lessons/` 116 檔部分重複 | 需要 consolidation | 🟢 低 |
+| ~~Obsidian Vault 筆記無自動淘汰~~ | ✅ 2026-04-07 首次大整理完成（22 檔 archived） | ✅ 已解決 |
+| ~~`Architecture/System Overview.md` 過時~~ | ✅ 已 archived，System Guide 為當前權威 | ✅ 已解決 |
+| ~~`Lessons/` 重複~~ | ✅ 4 組合併完成（110 active / 6 archived） | ✅ 已解決 |
 | `strategies.json` 結構可能空/損壞 | instinct engine 無策略知識可用 | 🟡 中 |
+| Vault wiki-link 批次回補 | 筆記間連結不足，知識圖譜稀疏 | 🟢 低 |
+| 定期 consolidation 排程 | 目前為手動，應自動化 | 🟢 低 |
 
 ### 服務 / 自動化層
 
 | 問題 | 影響 | 優先級 |
 |------|------|--------|
-| `running-services.md` 只記錄 28/67 個 plist | 文件嚴重落後現況 | 🟡 中 |
+| `running-services.md` 只記錄 28/67 個 plist | 文件嚴重落後現況（System Guide 有完整清單） | 🟡 中 |
 | 蝦蝦遺留 11 個 skill 無 owner | skill-catalog 仍指向已退休 agent | 🟡 中 |
 | `gemini-chat`、`identity-lint` 未列入 catalog | skill 存在但無文件 | 🟢 低 |
+| 3 個孤兒 Skill vault doc 已 archived | cpa-optimizer、daily-content-intelligence、threads-post-scraper | ✅ 已處理 |
 | 67 個 plist 中部分功能重疊 | 維護成本增加 | 🟢 低 |
 
 ---
